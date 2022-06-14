@@ -97,14 +97,8 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 			view.buffer.insert (ref iter, indent1.substring (0, indent1.length - 1), -1);
 			return;
 		}
-		// Multiline functioncall(foo,
-		// bar
 		if (previous_line_stripped.has_suffix (",")) {
 			info ("Indent-after-comma");
-			// Assume indentation is correct already
-			// E.g. in foo(abc,
-			// def, // Press Enter
-			//// We should be here now
 			var indent_part = extract_indent (previous_line_str);
 			var other_part = previous_line_str.substring (indent_part.length);
 			info ("Divided into `%s' and %s", indent_part, other_part);
@@ -128,16 +122,9 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 			view.buffer.insert (ref iter, new_indent, -1);
 			return;
 		}
+		// Increase indentation, but be wary of multi-line method calls/definitions/etc.
 		if (previous_line_stripped.has_suffix ("{")) {
-			// Special case for e.g.
-			// void foo (int a,
-			// int b) {
-			//// Don't land here
-			//// Land here
-			// }
-			// It will only go back a one line
 			if (line_no >= 1 && !previous_line_stripped.contains ("(") && previous_line_str.contains (")")) {
-				warning ("HERE");
 				Gtk.TextIter prev_prev_iter;
 				view.buffer.get_iter_at_line (out prev_prev_iter, line_no - 2);
 				var prev_prev_str = prev_prev_iter.get_text (previous_line_iter);
@@ -165,6 +152,33 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 			var indent1 = view.insert_spaces_instead_of_tabs ? string.nfill (view.tab_width, ' ') : "\t";
 			view.buffer.insert (ref iter, extract_indent (previous_line_str) + indent1, -1);
 			return;
+		} else if (previous_line_stripped.has_prefix ("for (")
+					|| previous_line_stripped.has_prefix ("for(")
+					|| previous_line_stripped.has_prefix ("if (")
+					|| previous_line_stripped.has_prefix ("if(")
+					|| previous_line_stripped.has_prefix ("while (")
+					|| previous_line_stripped.has_prefix ("while(")) {
+			// Oneline for-Loops/if-Statements
+			var indent1 = view.insert_spaces_instead_of_tabs ? string.nfill (view.tab_width, ' ') : "\t";
+			view.buffer.insert (ref iter, extract_indent (previous_line_str) + indent1, -1);
+			return;
+		}
+		// Go back after oneline statements
+		if (!previous_line_stripped.has_suffix ("{")) {
+			Gtk.TextIter prev_prev_iter;
+			view.buffer.get_iter_at_line (out prev_prev_iter, line_no - 2);
+			var prev_prev_str = prev_prev_iter.get_text (previous_line_iter);
+			var prev_prev_str1 = prev_prev_str.strip ();
+			if ((prev_prev_str1.has_prefix ("for (")
+					|| prev_prev_str1.has_prefix ("for(")
+					|| prev_prev_str1.has_prefix ("if (")
+					|| prev_prev_str1.has_prefix ("if(")
+					|| prev_prev_str1.has_prefix ("while (")
+					|| prev_prev_str1.has_prefix ("while(")) && previous_line_stripped != "") {
+				var old_indent = extract_indent (prev_prev_str);
+				view.buffer.insert (ref iter, old_indent, -1);
+				return;
+			}
 		}
 		view.buffer.insert (ref iter, extract_indent (previous_line_str), -1);
 	}
