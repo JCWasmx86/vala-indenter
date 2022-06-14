@@ -28,7 +28,7 @@ int main (string[] args) {
 		gsv.indenter = new ValaIndenter ();
 		gsv.set_auto_indent (true);
 		gsv.space_drawer.enable_matrix = true;
-		((GtkSource.Buffer)gsv.buffer).set_language (GtkSource.LanguageManager.get_default ().get_language ("vala"));
+		((GtkSource.Buffer) gsv.buffer).set_language (GtkSource.LanguageManager.get_default ().get_language ("vala"));
 		gsv.set_show_line_numbers (true);
 		var c = new Gtk.CssProvider ();
 		c.load_from_data ("textview { font-family: Monospace; font-size: 12pt; }".data);
@@ -51,6 +51,7 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 		}
 		return sb.str;
 	}
+
 	public void indent (GtkSource.View view, ref Gtk.TextIter iter) {
 		var line_no = iter.get_line ();
 		Gtk.TextIter previous_line_iter;
@@ -60,7 +61,8 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 		// Insert new // comment
 		if (previous_line_stripped.has_prefix ("//")) {
 			info ("Continuing // comment");
-			view.buffer.insert (ref iter, extract_indent (previous_line_str) + previous_line_stripped.split ("//")[0] + "// ", -1);
+			view.buffer.insert (ref iter, extract_indent (previous_line_str) + previous_line_stripped.split ("//")[0]
+			                    + "// ", -1);
 			return;
 		}
 		// Now try to continue a multiline comment
@@ -152,7 +154,8 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 						sub++;
 						var new_indent = extract_indent (tmp_str);
 						if (new_indent != reference_indent) {
-							var increase = view.insert_spaces_instead_of_tabs ? string.nfill (view.tab_width, ' ') : "\t";
+							var increase = view.insert_spaces_instead_of_tabs ? string.nfill (view.tab_width, ' ') :
+							    "\t";
 							view.buffer.insert (ref iter, new_indent + increase, -1);
 							return;
 						}
