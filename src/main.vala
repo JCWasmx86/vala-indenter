@@ -151,8 +151,42 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 					}
 				}
 			}
+			var found_closing_brace = false;
+			var reference_indent = extract_indent (previous_line_str);
+			var old = iter;
+			var cnter = 0;
+			while (line_no + cnter <= view.buffer.get_line_count ()) {
+				Gtk.TextIter next_line;
+				view.buffer.get_iter_at_line (out next_line, line_no + cnter);
+				cnter++;
+				var str = old.get_text (next_line);
+				info (">> `%s'", str);
+				old = next_line;
+				if (extract_indent (str) == reference_indent && str.strip ().has_prefix ("}")) {
+					found_closing_brace = true;
+					break;
+				} else if (extract_indent (str).length <= reference_indent.length) {
+					found_closing_brace = false;
+					break;
+				}
+			}
 			var indent1 = view.insert_spaces_instead_of_tabs ? string.nfill (view.tab_width, ' ') : "\t";
-			view.buffer.insert (ref iter, extract_indent (previous_line_str) + indent1, -1);
+			if (found_closing_brace || true) {
+				view.buffer.insert (ref iter, reference_indent + indent1, -1);
+				return;
+			}
+			Gtk.TextIter foo;
+			info ("Found no closing brace");
+			view.buffer.insert (ref iter, reference_indent + indent1, -1);
+			view.buffer.get_iter_at_line_offset (out foo, iter.get_line (), iter.get_line_offset ());
+			view.buffer.insert (ref foo, "\n" + reference_indent + "}", -1);
+			foo.backward_line ();
+			view.buffer.get_iter_at_line_offset (out iter, line_no, 1);
+			iter = foo.copy ();
+			iter.backward_line ();
+			info ("At %u %u", iter.get_line (), iter.get_line_offset ());
+			// info ("%u %u", iter.get_line (), foo.get_line ());
+			// assert (iter.get_line () == foo.get_line ());
 			return;
 		} else if ((previous_line_stripped.has_prefix ("for (")
 		            || previous_line_stripped.has_prefix ("for(")
@@ -185,6 +219,12 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 				view.buffer.insert (ref iter, old_indent, -1);
 				return;
 			}
+		}
+		if (previous_line_stripped.contains ("default:") || (previous_line_stripped.has_suffix (":") &&
+		                                                     previous_line_stripped.contains ("case "))) {
+			var indent1 = view.insert_spaces_instead_of_tabs ? string.nfill (view.tab_width, ' ') : "\t";
+			view.buffer.insert (ref iter, extract_indent (previous_line_str) + indent1, -1);
+			return;
 		}
 		if (!view.insert_spaces_instead_of_tabs) {
 			var indent = extract_indent (previous_line_str);
