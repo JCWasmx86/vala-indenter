@@ -21,11 +21,13 @@ int main (string[] args) {
 	var app = new Adw.Application ("io.example.foo", GLib.ApplicationFlags.FLAGS_NONE);
 	app.activate.connect (() => {
 		var w = new Gtk.ApplicationWindow (app);
+		w.set_size_request (600, 400);
 		var gsv = new GtkSource.View ();
 		var sc = new Gtk.ScrolledWindow ();
 		sc.child = gsv;
 		w.child = sc;
-		gsv.indenter = new ValaIndenter ();
+		// gsv.indenter = new ValaIndenter ();
+		gsv.indenter = new GtkSource1.ValaIndenter ();
 		gsv.set_auto_indent (true);
 		gsv.space_drawer.enable_matrix = true;
 		((GtkSource.Buffer) gsv.buffer).set_style_scheme (GtkSource.StyleSchemeManager.get_default ().get_scheme (
@@ -165,28 +167,25 @@ class ValaIndenter : GLib.Object, GtkSource.Indenter {
 				if (extract_indent (str) == reference_indent && str.strip ().has_prefix ("}")) {
 					found_closing_brace = true;
 					break;
-				} else if (extract_indent (str).length <= reference_indent.length) {
+				} else if (extract_indent (str).length < reference_indent.length) {
 					found_closing_brace = false;
 					break;
 				}
 			}
 			var indent1 = view.insert_spaces_instead_of_tabs ? string.nfill (view.tab_width, ' ') : "\t";
-			if (found_closing_brace || true) {
+			if (found_closing_brace) {
 				view.buffer.insert (ref iter, reference_indent + indent1, -1);
 				return;
 			}
-			Gtk.TextIter foo;
 			info ("Found no closing brace");
 			view.buffer.insert (ref iter, reference_indent + indent1, -1);
-			view.buffer.get_iter_at_line_offset (out foo, iter.get_line (), iter.get_line_offset ());
-			view.buffer.insert (ref foo, "\n" + reference_indent + "}", -1);
-			foo.backward_line ();
-			view.buffer.get_iter_at_line_offset (out iter, line_no, 1);
-			iter = foo.copy ();
-			iter.backward_line ();
-			info ("At %u %u", iter.get_line (), iter.get_line_offset ());
-			// info ("%u %u", iter.get_line (), foo.get_line ());
-			// assert (iter.get_line () == foo.get_line ());
+			var tmp = iter.get_offset ();
+			info ("%d", iter.get_offset ());
+			view.buffer.insert (ref iter, "\n" + reference_indent + "}", -1);
+			info ("%d", iter.get_offset ());
+			iter.set_offset (tmp);
+			info ("%d", iter.get_offset ());
+			view.buffer.get_iter_at_offset (out iter, tmp);
 			return;
 		} else if ((previous_line_stripped.has_prefix ("for (")
 		            || previous_line_stripped.has_prefix ("for(")
