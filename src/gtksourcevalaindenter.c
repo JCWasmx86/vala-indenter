@@ -78,7 +78,6 @@ static gboolean
 is_abnormal_indent (GtkSourceView *view,
                     char          *indent)
 {
-    size_t len;
     if (gtk_source_view_get_insert_spaces_instead_of_tabs (view)) {
         if (strstr (indent, "\t")) {
             return TRUE;
